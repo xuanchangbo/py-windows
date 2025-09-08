@@ -1,4 +1,6 @@
 # requirements.txt
+requests
+pillow
+numpy
 PyQt5==5.15.9
 Pillow==10.0.0
-# 添加你的项目依赖
