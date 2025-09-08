@@ -1,0 +1,5 @@
+# requirements.txt
+requests
+pillow
+numpy
+# 添加你的项目依赖
