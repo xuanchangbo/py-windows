@@ -3,43 +3,91 @@ name: Build Windows Executable
 on:
   push:
     tags:
-      - 'v*'  # 只在推送标签时触发，例如 v1.0.0
-  workflow_dispatch:  # 允许手动触发
+      - 'v*'
+  workflow_dispatch:
 
 jobs:
   build-windows-exe:
-    runs-on: windows-latest  # 使用 Windows 环境
+    runs-on: windows-latest
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       
+    - name: List all files (debug)
+      run: |
+        dir /s /b
+      
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.10'  # 指定 Python 版本
-        architecture: 'x64'     # 64位架构
+        python-version: '3.10'
         
-    - name: Install dependencies
+    - name: Check Python installation
       run: |
-        python -m pip install --upgrade pip
+        python --version
+        pip --version
+        where python
+        where pip
+      
+    - name: Install PyInstaller
+      run: |
         pip install pyinstaller
-        # 安装你的项目依赖
-        if exist requirements.txt pip install -r requirements.txt
-        
-    - name: Build executable with PyInstaller
+        pyinstaller --version
+      
+    - name: Check script exists
       run: |
-        # 使用 PyInstaller 打包
-        pyinstaller --onefile --name "MyApp" --console your_script.py
-        # 如果不需要控制台窗口（GUI应用），使用 --windowed 代替 --console
+        if exist test_script.py (
+          echo "test_script.py found"
+          type test_script.py | head -n 5
+        ) else (
+          echo "ERROR: test_script.py not found!"
+          dir *.py
+          exit 1
+        )
+      
+    - name: Test script execution
+      run: |
+        python test_script.py --help || echo "Script may not have --help option, but Python can import it"
+        python -c "import your_script; print('Script imports successfully')" || echo "Import failed"
+      
+    - name: Install dependencies if exists
+      run: |
+        if exist requirements.txt (
+          echo "Installing requirements..."
+          pip install -r requirements.txt
+        ) else (
+          echo "No requirements.txt found"
+        )
+      
+    - name: Build executable with detailed logging
+      run: |
+        pyinstaller --onefile --name "MyApp" --console --log-level DEBUG test_script.py 2>&1 | tee build.log
+      
+    - name: Check build results
+      run: |
+        if exist dist\MyApp.exe (
+          echo "Build successful! Executable created."
+          dir dist\
+        ) else (
+          echo "ERROR: Build failed - no executable created"
+          if exist build.log (
+            echo "=== BUILD LOG ==="
+            type build.log
+          )
+          exit 1
+        )
+      
+    - name: Upload build log (for debugging)
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-logs
+        path: build.log
         
-    - name: Upload executable artifact
+    - name: Upload executable
+      if: success()
       uses: actions/upload-artifact@v4
       with:
         name: windows-executable
-        path: dist/*.exe
-        if-no-files-found: error
-
-    - name: List files in dist directory (for debugging)
-      run: |
-        dir dist\
+        path: dist\*.exe
