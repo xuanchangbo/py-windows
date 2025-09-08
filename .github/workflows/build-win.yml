@@ -30,7 +30,7 @@ jobs:
     - name: Build executable with PyInstaller
       run: |
         # 使用 PyInstaller 打包
-        pyinstaller --onefile --name "MyApp" --console your_script.py
+        pyinstaller --onefile --name "MyApp" --console image_to_webp_gui.py
         # 如果不需要控制台窗口（GUI应用），使用 --windowed 代替 --console
         
     - name: Upload executable artifact
